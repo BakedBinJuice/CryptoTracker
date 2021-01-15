@@ -3,10 +3,10 @@
 from bs4 import BeautifulSoup
 import requests
 from forex_python.converter import CurrencyRates
-
-print("Scraping https://coinmarketcap.com/...\n")
+import smtplib, ssl
 
 c = CurrencyRates()
+
 cryptos = [
 "https://coinmarketcap.com/currencies/bitcoin/",
 "https://coinmarketcap.com/currencies/bitcoin-cash/",
@@ -14,8 +14,14 @@ cryptos = [
 "https://coinmarketcap.com/currencies/tether/",
 "https://coinmarketcap.com/currencies/litecoin/",
 "https://coinmarketcap.com/currencies/polkadot-new/",
-"https://coinmarketcap.com/currencies/chainlink/"
-		]
+"https://coinmarketcap.com/currencies/chainlink/",
+"https://coinmarketcap.com/currencies/neo/"
+]
+
+emails = [
+]
+
+prices = []
 
 for url in cryptos:
 	r = requests.get(url)
@@ -27,6 +33,7 @@ for url in cryptos:
 	checker = ''
 	heading = ''
 	price = ''
+
 	for i, v in enumerate(newData):
 		if v == '>':
 			checker = v
@@ -54,7 +61,31 @@ for url in cryptos:
 	newerPrice = newPrice.replace(',', "")
 	finalPrice = newerPrice
 	finalPrice = c.convert('USD', 'AUD', float(finalPrice))
-	print(url)
-	print(finalHeading + " - $" + str(finalPrice) + "\n")
+	finalPrice = round(finalPrice, 2)
+	fullDisplay = finalHeading + " - $" + str(finalPrice) + " (AUD)\n"
+	prices.append(fullDisplay)
 
+port = 587
+password = "emailPassword"
+context = ssl.create_default_context()
+sender = "Sender Email"
+finalDisplay = '''\
+Subject: Crypto Update.
 
+All data has been scraped from (https://coinmarketcap.com/).
+
+'''
+
+for price in prices:
+	finalDisplay+="\n" + price
+
+print(finalDisplay)
+
+with smtplib.SMTP("smtp.gmail.com", port) as server:
+	server.ehlo()
+	server.starttls(context=context)
+	server.ehlo()
+	server.login(sender, password)
+	for email in emails:
+		server.sendmail(sender, email, finalDisplay)
+		print("Successfully sent email to " + email)
